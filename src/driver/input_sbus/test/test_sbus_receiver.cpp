@@ -30,7 +30,7 @@ void OnSbusMsgReceived(const RcMessage &msg) {
 int main(int argc, char **argv) {
   std::signal(SIGINT, [](int signum) { keep_running = false; });
 
-  SbusReceiver sbus_receiver("/dev/ttyUSB0");
+  SbusReceiver sbus_receiver("/dev/ttyS4");
   sbus_receiver.SetOnRcMessageReceivedCallback(OnSbusMsgReceived);
 
   if (!sbus_receiver.Open()) {

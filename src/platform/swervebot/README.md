@@ -29,3 +29,11 @@ sequenceDiagram
     MainThread ->> EventThread: Stop
     deactivate EventThread
 ```
+
+## Hardware Configuration
+
+PocketBeagle hardware configuration:
+
+* steering_motor_port: /dev/ttyS0
+* driving_motor_port: /dev/ttyS2
+* rc_receiver_port: /dev/ttyS4

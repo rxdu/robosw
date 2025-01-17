@@ -19,6 +19,7 @@ class ManualMode : public FsmState<ControlContext> {
   void Update(ControlContext& context);
 
  private:
+  TimePoint last_cmd_update_time_;
   float vx_{0.0};
   float vy_{0.0};
   float wz_{0.0};

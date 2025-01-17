@@ -14,9 +14,9 @@
 
 namespace xmotion {
 struct RcMessage {
-  std::array<float, 24> channels;
-  bool frame_loss;
-  bool fault_protection;
+  std::array<float, 24> channels = {0};
+  bool frame_loss = false;
+  bool fault_protection = false;
 };
 
 class RcReceiverInterface {
@@ -28,6 +28,7 @@ class RcReceiverInterface {
   virtual void Close() = 0;
   virtual bool IsOpened() const = 0;
 
+  /// @brief Scale the channel value to [-1, 1]
   static float ScaleChannelValue(float value, float min, float neutral,
                                  float max) {
     if (value < neutral) {

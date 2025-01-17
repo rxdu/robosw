@@ -33,6 +33,7 @@ struct SbotConfig {
     float min;
     float neutral;
     float max;
+    bool invert;
   };
 
   /////////////////////////////////////////////////////////////////////////////

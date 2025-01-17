@@ -1,6 +1,6 @@
 robot_base:
-  steering_motor_port: /dev/ttyACM2
-  driving_motor_port: /dev/ttyACM1
+  steering_motor_port: /dev/ttyS0
+  driving_motor_port: /dev/ttyS2
   max_driving_speed: 1.0
   max_steering_angle: 1.57
   driving_deadzone: 0.005
@@ -11,7 +11,7 @@ control:
     joystick:
       device: /dev/input/event21
     rc_receiver:
-      port: /dev/ttyACM0
+      port: /dev/ttyS4
       mapping:
         mode:
           channel: 5
@@ -37,9 +37,6 @@ control:
           neutral: 980
           max: 1811
           invert: false
-  command_regulation:
-    max_steering_error: 3.14
-    driving_limiting_scale: 0.5
   manual_mode:
     driving_scale: 1.0
     steering_scale: 1.5

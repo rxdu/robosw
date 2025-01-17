@@ -56,13 +56,15 @@ bool LoadConfigFile(const std::string& file_path, SbotConfig* config) {
         rc_receiver_node["port"].as<std::string>();
     {
       config->control_settings.user_input.rc_receiver.mapping.mode.channel =
-                rc_receiver_node["mapping"]["mode"]["channel"].as<int>();
+          rc_receiver_node["mapping"]["mode"]["channel"].as<int>();
       config->control_settings.user_input.rc_receiver.mapping.mode.min =
           rc_receiver_node["mapping"]["mode"]["min"].as<float>();
       config->control_settings.user_input.rc_receiver.mapping.mode.neutral =
           rc_receiver_node["mapping"]["mode"]["neutral"].as<float>();
       config->control_settings.user_input.rc_receiver.mapping.mode.max =
           rc_receiver_node["mapping"]["mode"]["max"].as<float>();
+      config->control_settings.user_input.rc_receiver.mapping.mode.invert =
+          rc_receiver_node["mapping"]["mode"]["invert"].as<bool>();
 
       config->control_settings.user_input.rc_receiver.mapping.linear_x.channel =
           rc_receiver_node["mapping"]["linear_x"]["channel"].as<int>();
@@ -72,6 +74,8 @@ bool LoadConfigFile(const std::string& file_path, SbotConfig* config) {
           rc_receiver_node["mapping"]["linear_x"]["neutral"].as<float>();
       config->control_settings.user_input.rc_receiver.mapping.linear_x.max =
           rc_receiver_node["mapping"]["linear_x"]["max"].as<float>();
+      config->control_settings.user_input.rc_receiver.mapping.linear_x.invert =
+          rc_receiver_node["mapping"]["linear_x"]["invert"].as<bool>();
 
       config->control_settings.user_input.rc_receiver.mapping.linear_y.channel =
           rc_receiver_node["mapping"]["linear_y"]["channel"].as<int>();
@@ -81,6 +85,8 @@ bool LoadConfigFile(const std::string& file_path, SbotConfig* config) {
           rc_receiver_node["mapping"]["linear_y"]["neutral"].as<float>();
       config->control_settings.user_input.rc_receiver.mapping.linear_y.max =
           rc_receiver_node["mapping"]["linear_y"]["max"].as<float>();
+      config->control_settings.user_input.rc_receiver.mapping.linear_y.invert =
+          rc_receiver_node["mapping"]["linear_y"]["invert"].as<bool>();
 
       config->control_settings.user_input.rc_receiver.mapping.angular_z
           .channel =
@@ -92,6 +98,8 @@ bool LoadConfigFile(const std::string& file_path, SbotConfig* config) {
           rc_receiver_node["mapping"]["angular_z"]["neutral"].as<float>();
       config->control_settings.user_input.rc_receiver.mapping.angular_z.max =
           rc_receiver_node["mapping"]["angular_z"]["max"].as<float>();
+      config->control_settings.user_input.rc_receiver.mapping.angular_z.invert =
+          rc_receiver_node["mapping"]["angular_z"]["invert"].as<bool>();
     }
 
     // manual mode

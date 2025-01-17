@@ -16,6 +16,16 @@ namespace xmotion {
 SbotSystem::SbotSystem(const SbotConfig& config) : config_(config) {}
 
 bool SbotSystem::Initialize() {
+  // create a control context
+  ControlContext context;
+  context.config = config_;
+  context.js_axis_queue = std::make_shared<ThreadSafeQueue<AxisEvent>>();
+  context.js_button_queue = std::make_shared<ThreadSafeQueue<JsButton>>();
+  context.rc_lever_queue = std::make_shared<ThreadSafeQueue<LeverEvent>>();
+  context.command_queue = std::make_shared<ThreadSafeQueue<UserCommand>>();
+  context.feedback_queue = std::make_shared<ThreadSafeQueue<RobotFeedback>>();
+
+  // set up hardware
   if (config_.control_settings.user_input.type ==
       SbotConfig::UserInputType::kJoystick) {
     // initialize joystick
@@ -59,19 +69,10 @@ bool SbotSystem::Initialize() {
     XLOG_ERROR("Failed to initialize robot base");
     return false;
   }
-
-  // create a control context
-  ControlContext context;
-  context.config = config_;
   context.robot_base = sbot_;
-  context.js_axis_queue = std::make_shared<ThreadSafeQueue<AxisEvent>>();
-  context.js_button_queue = std::make_shared<ThreadSafeQueue<JsButton>>();
-  context.sbus_rc_queue = std::make_shared<ThreadSafeQueue<RcMessage>>();
-  context.command_queue = std::make_shared<ThreadSafeQueue<UserCommand>>();
-  context.feedback_queue = std::make_shared<ThreadSafeQueue<RobotFeedback>>();
 
   // initialize fsm
-  ManualMode initial_state{context};
+  AutoMode initial_state{context};
   fsm_ =
       std::make_unique<SbotFsm>(std::move(initial_state), std::move(context));
 
@@ -103,24 +104,26 @@ void SbotSystem::ControlLoop() {
     last_time = now;
 
     // update control
-    // UserCommand cmd;
-    // while (context.command_queue->TryPop(cmd)) {
-    //   sbot_->SetMotionCommand({{cmd.vx, cmd.vy, 0}, {0, 0, cmd.wz}});
-    // }
-    // sbot_->Update(dt);
+    UserCommand cmd;
+    while (context.command_queue->TryPop(cmd)) {
+      sbot_->SetMotionCommand({{cmd.vx, cmd.vy, 0}, {0, 0, cmd.wz}});
+    }
+    sbot_->Update(dt);
 
     // time housekeeping
-    if ((dt - 0.02) / 0.02 > 0.1) {
+    if ((dt - 0.05) / 0.05 > 0.1) {
       XLOG_WARN("SbotSystem: control loop running at {} ms", dt * 1000);
     }
 
-    timer.sleep_until_ms(20);
+    timer.sleep_until_ms(50);
   }
   XLOG_INFO("SbotSystem: control loop exited");
 }
 
 void SbotSystem::OnJsButtonEvent(const JsButton& btn,
                                  const JxButtonEvent& event) {
+  if (fsm_ == nullptr) return;
+
   //  std::cout << "Button " << (int)(btn) << " "
   //            << (event == JxButtonEvent::kPress ? "pressed" : "released")
   //            << std::endl;
@@ -130,6 +133,8 @@ void SbotSystem::OnJsButtonEvent(const JsButton& btn,
 }
 
 void SbotSystem::OnJsAxisEvent(const JsAxis& axis, const float& value) {
+  if (fsm_ == nullptr) return;
+
   //  std::cout << "Axis " << (int)(axis) << " value: " << value << std::endl;
   if (axis == JsAxis::kX || axis == JsAxis::kY || axis == JsAxis::kRX) {
     AxisEvent event;
@@ -140,6 +145,13 @@ void SbotSystem::OnJsAxisEvent(const JsAxis& axis, const float& value) {
 }
 
 void SbotSystem::OnSbusMsgReceived(const RcMessage& msg) {
+  if (fsm_ == nullptr) return;
+
+  // std::cout << "Sbus message received" << std::endl;
+  // for (int i = 0; i < 18; ++i) {
+  //   std::cout << "ch" << i << ": " << msg.channels[i] << " ";
+  // }
+
   static RcMessage prev_msg;
   auto mode_chn = config_.control_settings.user_input.rc_receiver.mapping.mode;
   auto lx_chn =
@@ -149,8 +161,19 @@ void SbotSystem::OnSbusMsgReceived(const RcMessage& msg) {
   auto az_chn =
       config_.control_settings.user_input.rc_receiver.mapping.angular_z;
 
+  if (msg.frame_loss) return;
+
   if (prev_msg.channels[mode_chn.channel] != msg.channels[mode_chn.channel]) {
-    fsm_->GetContext().sbus_rc_queue->Push(msg);
+    LeverEvent event;
+    event.channel = mode_chn.channel;
+    float level_pos = RcReceiverInterface::ScaleChannelValue(
+        msg.channels[mode_chn.channel], mode_chn.min, mode_chn.neutral,
+        mode_chn.max);
+    if (level_pos > 0.5) level_pos = 1.0;
+    if (level_pos < -0.5) level_pos = -1.0;
+    if (mode_chn.invert) level_pos = -level_pos;
+    event.value = level_pos;
+    fsm_->GetContext().rc_lever_queue->Push(event);
   }
 
   // mimic joystick axis event
@@ -158,31 +181,33 @@ void SbotSystem::OnSbusMsgReceived(const RcMessage& msg) {
     AxisEvent event;
     float lx = RcReceiverInterface::ScaleChannelValue(
         msg.channels[lx_chn.channel], lx_chn.min, lx_chn.neutral, lx_chn.max);
+    event.timestamp = Clock::now();
     event.axis = JsAxis::kX;
+    if (lx_chn.invert) lx = -lx;
     event.value = lx;
     fsm_->GetContext().js_axis_queue->Push(event);
-    // std::cout << "lx: " << lx << " ly: " << ly << " ax: " << ax << std::endl;
   }
 
   if (prev_msg.channels[ly_chn.channel] != msg.channels[ly_chn.channel]) {
     AxisEvent event;
     float ly = RcReceiverInterface::ScaleChannelValue(
         msg.channels[ly_chn.channel], ly_chn.min, ly_chn.neutral, ly_chn.max);
+    event.timestamp = Clock::now();
     event.axis = JsAxis::kY;
+    if (ly_chn.invert) ly = -ly;
     event.value = ly;
     fsm_->GetContext().js_axis_queue->Push(event);
-    // std::cout << "lx: " << lx << " ly: " << ly << " ax: " << ax << std::endl;
   }
 
   if (prev_msg.channels[az_chn.channel] != msg.channels[az_chn.channel]) {
     AxisEvent event;
-    float ax = RcReceiverInterface::ScaleChannelValue(
+    float az = RcReceiverInterface::ScaleChannelValue(
         msg.channels[az_chn.channel], az_chn.min, az_chn.neutral, az_chn.max);
+    event.timestamp = Clock::now();
     event.axis = JsAxis::kRX;
-    event.value = ax;
+    if (az_chn.invert) az = -az;
+    event.value = az;
     fsm_->GetContext().js_axis_queue->Push(event);
-
-    // std::cout << "lx: " << lx << " ly: " << ly << " ax: " << ax << std::endl;
   }
 
   prev_msg = msg;

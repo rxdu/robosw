@@ -78,5 +78,4 @@ void WsSbotBase::SetDrivingCommand(const std::array<float, 4>& speeds) {
   }
   robot_->SetDrivingCommand(speeds);
 }
-
 }  // namespace xmotion

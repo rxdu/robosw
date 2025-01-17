@@ -21,9 +21,6 @@
 
 namespace xmotion {
 class SbotSystem {
-  using Clock = std::chrono::steady_clock;
-  using TimePoint = std::chrono::time_point<Clock>;
-
  public:
   SbotSystem(const SbotConfig& config);
   ~SbotSystem() = default;

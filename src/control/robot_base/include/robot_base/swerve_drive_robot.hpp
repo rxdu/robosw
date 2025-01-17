@@ -40,7 +40,12 @@ namespace xmotion {
 class SwerveDriveRobot {
  public:
   struct Config {
+    // model parameters
     SwerveDriveKinematics::Param kinematics_param;
+
+    // control parameters
+    double max_steering_error = 3.14;
+    double driving_limiting_scale = 0.5;
 
     // actuator configuration
     bool reverse_left_wheels = false;
